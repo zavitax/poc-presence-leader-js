@@ -139,7 +139,7 @@ class LeaderElectionRealtimeClient {
         }
 
         this._leaderTimer = setTimeout(() => {
-            //this._isWarm = true;
+            this._isWarm = true;
 
             this._leaderTimer = null;
 

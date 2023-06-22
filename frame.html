@@ -140,9 +140,13 @@
                 }
                 enqueue();
 
-                await sleep(15000);
+                window.onbeforeunload = function(event) {
+                    event.preventDefault();
 
-                await sleep(Math.floor(30000 * Math.random()));
+                    coordinatedMessageQueueRealtimeClient.dispose();
+
+                    event.returnValue = "test";
+                }
 
                 /*
                 debug('dispose');

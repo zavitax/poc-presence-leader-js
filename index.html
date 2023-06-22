@@ -2,50 +2,82 @@
 <html>
     <body>
         <script>
-            function frame() {
-                console.log('add frame');
+            const frames = {};
 
-                const e = document.createElement('iframe');
-                e.width = "30%";
-                e.height = "100";
-                e.src = "frame.html";
-                document.body.appendChild(e);
+            function add_frame() {
+                const id = crypto.randomUUID();
 
-                return () => {
-                    console.log('remove frame');
+                console.log('add frame ', id);
 
-                    document.body.removeChild(e);
-                    e.src = "about:blank";
+                const iframe = document.createElement('iframe');
+                iframe.width = "600";
+                iframe.height = "100";
+                iframe.src = "frame.html";
+
+                const div = document.createElement("div");
+                div.style.display = 'inline-block';
+
+                remove = () => {
+                    console.log('remove frame ', id);
+
+                    document.body.removeChild(div);
+                    iframe.src = "about:blank";
+
+                    delete frames[id];
+
+                    return false;
                 };
+
+                const a = document.createElement("a");
+                a.style.display = 'block';
+                a.href = '#';
+                a.innerText = '[X] Close';
+                a.onclick = remove;
+
+                div.appendChild(a);
+                div.appendChild(iframe);
+
+                document.body.appendChild(div);
+
+                frames[id] = remove;
+
+                return remove;
             }
 
-            const frames = [];
+            function remove_random_frame() {
+                const keys = Object.keys(frames);
+                if (keys.length === 0) return;
+
+                const id = keys[Math.floor(Math.random() * keys.length)];
+
+                const remove = frames[id];
+
+                remove();
+            }
+
             const chance_to_add = 0.9;
             const max_frames = 3 * 5;
 
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
-            frames.push(frame());
+            (function() {
+                const a = document.createElement('a');
+                a.style.display = 'block';
+                a.style.marginBottom = '1em';
+                a.innerText = '[ADD FRAME]';
+                a.href = '#';
+                a.onclick = add_frame;
+
+                document.body.appendChild(a);
+            })();
+
+            for (let i = 0; i < 9; ++i) {
+                add_frame();
+            }
 
             setInterval(() => {
                 if (Math.random() < chance_to_add && frames.length < max_frames) {
-                    frames.push(frame());
+                    add_frame();
                 } else {
-                    if (frames.length === 0) return;
-
-                    const index = Math.floor(frames.length * Math.random());
-
-                    const remove = frames[index];
-
-                    frames.splice(index, 1);
-
-                    remove();
+                    remove_random_frame();
                 }
             }, 1000 * 60);
         </script>
