@@ -46,7 +46,7 @@
 
             function remove_random_frame() {
                 const keys = Object.keys(frames);
-                if (keys.length === 0) return;
+                if (keys.length <= 1) return;
 
                 const id = keys[Math.floor(Math.random() * keys.length)];
 
@@ -55,7 +55,7 @@
                 remove();
             }
 
-            const chance_to_add = 0.9;
+            const chance_to_add = 0.7;
             const max_frames = 3 * 5;
 
             (function() {
@@ -74,7 +74,10 @@
             }
 
             setInterval(() => {
-                if (Math.random() < chance_to_add && frames.length < max_frames) {
+                const threshold = chance_to_add * 1000;
+                const val = Date.now() % 1000;
+
+                if (val < threshold) {
                     add_frame();
                 } else {
                     remove_random_frame();
