@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <script src="eventEmitter.js"></script>
+        <script src="eventRealtimeClient.js"></script>
+        <script src="presenceRealtimeClient.js"></script>
+        <script src="leaderElectionRealtimeClient.js"></script>
+        <script src="coordinatedMessageQueueRealtimeClient.js"></script>
+
+        <div id="debug"></div>
+        <div id="aux"></div>
+        <div id="status"></div>
+
+        <script>
+            const uuid = crypto.randomUUID();
+
+            async function main() {
+                function sleep(ms) {
+                    return new Promise(resolve => {
+                        setTimeout(resolve, ms);
+                    });
+                }
+
+                function debug(...args) {
+                    document.getElementById("debug").innerText = uuid + ": " + JSON.stringify([ ... args ]);
+                    console.log(uuid, ...args);
+                }
+
+                function aux(...args) {
+                    document.getElementById("aux").innerText = uuid + ": " + JSON.stringify([ ... args ]);
+                }
+
+                function status(...args) {
+                    document.getElementById("status").innerText = uuid + ": " + JSON.stringify([ ... args ]);
+                }
+
+                function color(bgColor = 'inherit') {
+                    document.body.style.backgroundColor = bgColor;
+                }
+
+                debug('wait');
+
+                //await sleep(Math.floor(10000 * Math.random()));
+
+                debug('start');
+                color('#eeeeee');
+
+                const leaderElectionRealtimeClient = new LeaderElectionRealtimeClient({
+                    presenceRealtimeClient: new PresenceRealtimeClient({
+                        eventRealtimeClient: new EventRealtimeClient({
+                            realtimeEventEmitterProvider: new BroadcastChannelRealtimeEventEmitterProvider({
+                                broadcastChannelName: 'presence',
+                            }),
+                        }),
+                        heartbeatIntervalMilliseconds: 5000,
+                        requestDataCallback: () => {
+                            return {
+                                key: uuid,
+                            };
+                        }
+                    }),
+                    requestSortParticipantsCallback: (a, b) => {
+                        const av = a.data.key;
+                        const bv = b.data.key;
+
+                        if (av < bv) return -1;
+                        if (av > bv) return 1;
+                        return 0;
+                    },
+                });
+
+                const coordinatedMessageQueueRealtimeClient = new CoordinatedMessageQueueRealtimeClient({
+                    leaderElectionRealtimeClient,
+                    eventRealtimeClient: new EventRealtimeClient({
+                        realtimeEventEmitterProvider: new BroadcastChannelRealtimeEventEmitterProvider({
+                            broadcastChannelName: 'coordination',
+                        }),
+                    }),
+                });
+
+                leaderElectionRealtimeClient.on('leaderStateChanged', ({ isLeader }) => {
+                    debug(
+                        'isLeader: ',
+                        leaderElectionRealtimeClient.isLeader
+                    );
+
+                    if (leaderElectionRealtimeClient.isLeader) {
+                        color('green');
+                    } else {
+                        color('#eeeeee');
+                    }
+                });
+
+                leaderElectionRealtimeClient.presenceRealtimeClient.on('change', () => {
+                    aux(
+                        'participants: ',
+                        leaderElectionRealtimeClient.presenceRealtimeClient.participants.length
+                    );
+                });
+
+                coordinatedMessageQueueRealtimeClient.on('message', event => {
+                    const { src, ack, ackToken, data } = event;
+
+                    const delayMs = Math.floor(Math.random() * 1000);
+
+                    status('got event: from ', src, ' -> ', data.data, '    ack delayMs: ', delayMs);;
+
+                    setTimeout(() => {
+                        //console.log(uuid, ' ack()');
+
+                        ack();
+                    }, delayMs);
+                });
+
+                await sleep(6000);
+
+                let i = 0;
+                function enqueue() {
+                    ++i;
+                    if (coordinatedMessageQueueRealtimeClient.queue.length < 10) {
+                        coordinatedMessageQueueRealtimeClient.enqueue({ data: { seq: i } });
+                    }
+                    setTimeout(enqueue, 1000);
+                }
+                enqueue();
+
+                await sleep(15000);
+
+                await sleep(Math.floor(30000 * Math.random()));
+
+                /*
+                debug('dispose');
+                color('#888888');
+                //await leaderElectionRealtimeClient.dispose();
+                await coordinatedMessageQueueRealtimeClient.dispose();
+                debug('disposed');
+                color('#444444');
+                */
+            }
+
+            main();
+        </script>
+    </body>
+</html>
