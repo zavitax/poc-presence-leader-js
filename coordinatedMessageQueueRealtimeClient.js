@@ -92,7 +92,7 @@ class CoordinatedMessageQueueRealtimeClient {
         });
 
         if (this._leaderElectionRealtimeClient.isLeader) {
-            console.log('queue: ', this._queue.length);
+            //console.log('queue: ', this._queue.length);
         }
 
         this._maybeProcessNextQueueItem();
@@ -148,7 +148,7 @@ class CoordinatedMessageQueueRealtimeClient {
     _onWelcomeEvent({ src, event, data: messageData }) {
         const { nextQueueItem } = messageData;
 
-        console.log('_onWelcomeEvent: ', nextQueueItem);
+        //console.log('_onWelcomeEvent: ', nextQueueItem);
     }
 
     _onMsgEvent({ src, event, data }) {
@@ -231,7 +231,7 @@ class CoordinatedMessageQueueRealtimeClient {
         // Wait until all participants acknowledged the message
         await this._waitForAckPromise;
 
-        console.log('promises settled: ', promises.length, '  queue length: ', this._queue.length);
+        // console.log('promises settled: ', promises.length, '  queue length: ', this._queue.length);
 
         this._isProcessing = false;
 

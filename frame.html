@@ -22,16 +22,16 @@
                 }
 
                 function debug(...args) {
-                    document.getElementById("debug").innerText = uuid + ": " + JSON.stringify([ ... args ]);
-                    console.log(uuid, ...args);
+                    document.getElementById("debug").innerText = JSON.stringify([ ... args ]);
+                    //console.log(uuid, ...args);
                 }
 
                 function aux(...args) {
-                    document.getElementById("aux").innerText = uuid + ": " + JSON.stringify([ ... args ]);
+                    document.getElementById("aux").innerText = JSON.stringify([ ... args ]);
                 }
 
                 function status(...args) {
-                    document.getElementById("status").innerText = uuid + ": " + JSON.stringify([ ... args ]);
+                    document.getElementById("status").innerText = JSON.stringify([ ... args ]);
                 }
 
                 function color(bgColor = 'inherit') {
@@ -85,12 +85,16 @@
                     );
 
                     if (leaderElectionRealtimeClient.isLeader) {
-                        color('green');
+                        color('#88ee88');
                     } else {
                         color('#eeeeee');
                     }
                 });
 
+                aux(
+                    'init participants: ',
+                    leaderElectionRealtimeClient.presenceRealtimeClient.participants.length
+                );
                 leaderElectionRealtimeClient.presenceRealtimeClient.on('change', () => {
                     aux(
                         'participants: ',
@@ -101,7 +105,13 @@
                 coordinatedMessageQueueRealtimeClient.on('message', event => {
                     const { src, ack, ackToken, data } = event;
 
-                    const delayMs = Math.floor(Math.random() * 1000);
+                    if (!leaderElectionRealtimeClient.isLeader) {
+                        color("#eeeeee");
+                    } else {
+                        color('#88ee88');
+                    }
+
+                    const delayMs = Math.floor(Math.random() * 3000);
 
                     status('got event: from ', src, ' -> ', data.data, '    ack delayMs: ', delayMs);;
 
@@ -109,6 +119,12 @@
                         //console.log(uuid, ' ack()');
 
                         ack();
+
+                        if (!leaderElectionRealtimeClient.isLeader) {
+                            color("#aaaaaa");
+                        } else {
+                            color('#44aa44');
+                        }
                     }, delayMs);
                 });
 

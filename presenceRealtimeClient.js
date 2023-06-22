@@ -108,6 +108,11 @@ class PresenceRealtimeClient {
             //console.log(uuid, 'new participant: ', src);
             this._eventEmitter.emit('join', { participant: p });
             this._eventEmitter.emit('change', { participants: this.participants || [] });
+
+            if (src !== this.eventRealtimeClient.uuid) {
+                // Someone new and not me - lets welcome them
+                this.eventRealtimeClient.emit('presence:heartbeat', {});
+            }
         }
     }
 
@@ -116,13 +121,7 @@ class PresenceRealtimeClient {
 
         switch (event) {
             case 'presence:join':
-                await this._onParticipantHeartbeat(packet);
-                break;
-
             case 'presence:leave':
-                await this._onParticipantTimeout({ src });
-                break;
-
             case 'presence:heartbeat':
                 await this._onParticipantHeartbeat(packet);
                 break;

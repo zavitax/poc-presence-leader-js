@@ -14,7 +14,7 @@ class LeaderElectionRealtimeClient {
     constructor({
         presenceRealtimeClient,
         requestSortParticipantsCallback,
-        warmupTimeMilliseconds = 3000,
+        warmupTimeMilliseconds = 10000,
         allowLeaderDemotion = false,
     }) {
         this._eventEmitter = new EventEmitter();
@@ -82,18 +82,18 @@ class LeaderElectionRealtimeClient {
     }
 
     _onPresenceJoin({ participant }) {
-        if (this.isLeader) {
+        /*if (this.isLeader) {
             // Claim leadership
             this._claimLeadership();
         } else {
             // Re-evaluate leadership when someone joins
             this._evalLeader();
-        }
+        }*/
     }
 
     _onPresenceLeave({ participant }) {
         // Re-evaluate leadership when someone leaves
-        this._evalLeader();
+        //this._evalLeader();
     }
 
     _onPresenceChange({ participants }) {
@@ -102,12 +102,8 @@ class LeaderElectionRealtimeClient {
     }
 
     _onLeaderRequested() {
-        if (this.isLeader) {
-            this._claimLeadership();
-        } else {
-            // See if leader election is in order
-            this._evalLeader();
-        }
+        // See if leader election is in order
+        this._evalLeader();
     }
 
     _onLeaderAnnounced(packet) {
@@ -129,14 +125,21 @@ class LeaderElectionRealtimeClient {
     }
 
     _evalLeader() {
+        console.log(uuid, '_evalLeader');
+
         if (this._leaderTimer) {
             clearTimeout(this._leaderTimer);
 
             this._leaderTimer = null;
         }
 
+        if (this.isLeader) {
+            // Claim leadership
+            this._claimLeadership();
+        }
+
         this._leaderTimer = setTimeout(() => {
-            this._isWarm = true;
+            //this._isWarm = true;
 
             this._leaderTimer = null;
 
@@ -153,6 +156,7 @@ class LeaderElectionRealtimeClient {
     }
 
     _evalLeaderExec() {
+        console.log(uuid, '_evalLeaderExec');
         if (this._leaderExists() && !this._allowLeaderDemotion) {
             // Don't swap a leader which already exists
             return;
