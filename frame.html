@@ -45,12 +45,20 @@
                 debug('start');
                 color('#eeeeee');
 
+                function createRealtimeEventEmitterProvider() {
+                    return new WebsocketRealtimeEventEmitterProvider({
+                        websocketUrl: 'ws://localhost:8080',
+                    });
+                    /*
+                    return new BroadcastChannelRealtimeEventEmitterProvider({
+                        broadcastChannelName: 'test',
+                    });*/
+                }
+
                 const leaderElectionRealtimeClient = new LeaderElectionRealtimeClient({
                     presenceRealtimeClient: new PresenceRealtimeClient({
                         eventRealtimeClient: new EventRealtimeClient({
-                            realtimeEventEmitterProvider: new BroadcastChannelRealtimeEventEmitterProvider({
-                                broadcastChannelName: 'presence',
-                            }),
+                            realtimeEventEmitterProvider: createRealtimeEventEmitterProvider(),
                         }),
                         heartbeatIntervalMilliseconds: 5000,
                         requestDataCallback: () => {
@@ -72,9 +80,7 @@
                 const coordinatedMessageQueueRealtimeClient = new CoordinatedMessageQueueRealtimeClient({
                     leaderElectionRealtimeClient,
                     eventRealtimeClient: new EventRealtimeClient({
-                        realtimeEventEmitterProvider: new BroadcastChannelRealtimeEventEmitterProvider({
-                            broadcastChannelName: 'coordination',
-                        }),
+                        realtimeEventEmitterProvider: createRealtimeEventEmitterProvider(),
                     }),
                 });
 
