@@ -2,6 +2,9 @@
 <html>
     <body>
         <script>
+            const chance_to_add = 0.7;
+            const max_frames = 3 * 5;
+
             const frames = {};
 
             function add_frame() {
@@ -55,9 +58,6 @@
                 remove();
             }
 
-            const chance_to_add = 0.7;
-            const max_frames = 3 * 5;
-
             (function() {
                 const a = document.createElement('a');
                 a.style.display = 'block';
@@ -78,7 +78,11 @@
                 const val = Date.now() % 1000;
 
                 if (val < threshold) {
-                    add_frame();
+                    const count = Object.keys(frames).length;
+
+                    if (count < max_frames) {
+                        add_frame();
+                    }
                 } else {
                     remove_random_frame();
                 }

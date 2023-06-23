@@ -104,6 +104,11 @@ class LeaderElectionRealtimeClient {
     _onLeaderRequested() {
         // See if leader election is in order
         this._evalLeader();
+
+        setTimeout(() => {
+            // Additional pass
+            this._evalLeader();
+        }, this._warmupTimeMilliseconds);
     }
 
     _onLeaderAnnounced(packet) {
@@ -122,6 +127,11 @@ class LeaderElectionRealtimeClient {
         });
 
         this._eventEmitter.emit('leaderRequested', {});
+
+        setTimeout(() => {
+            // Additional pass
+            this._evalLeader();
+        }, this._warmupTimeMilliseconds);
     }
 
     _evalLeader() {
