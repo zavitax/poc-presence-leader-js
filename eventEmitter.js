@@ -141,16 +141,18 @@ class WebsocketRealtimeEventEmitterProvider /*implements RealtimeEventEmitterPro
 class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
     constructor({
         websocketUrl,
+        reconnectDelayMilliseconds = 1000,
     }) {
         this._eventEmitter = new EventEmitter();
         this._websocketUrl = websocketUrl;
+        this._reconnectDelayMilliseconds = reconnectDelayMilliseconds;
 
         this._onMessage = this._onMessage.bind(this);
         this._onError = this._onError.bind(this);
 
         this._readyPromise = Promise.resolve();
 
-        this._connect();
+        this._connect(true);
     }
 
     async dispose() {
@@ -159,33 +161,37 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
         await this._eventEmitter.dispose();
     }
 
-    _connect() {
-        this._ws = new WebSocket(this._websocketUrl);
-        this._ws.addEventListener('close', this._onError);
-        this._ws.addEventListener('error', this._onError);
-        this._ws.addEventListener('message', this._onMessage);
+    _connect(isFirst = false) {
+        const delayMs = isFirst ? 0 : this._reconnectDelayMilliseconds;
 
         const self = this;
 
         this._readyPromise = new Promise((resolve, reject) => {
-            function teardown() {
-                self._ws.removeEventListener('open', open);
-                self._ws.removeEventListener('error', open);  
-            }
+            setTimeout(() => {
+                self._ws = new WebSocket(this._websocketUrl);
+                self._ws.addEventListener('close', this._onError);
+                self._ws.addEventListener('error', this._onError);
+                self._ws.addEventListener('message', this._onMessage);
 
-            function error() {
-                teardown();
-                reject(new Error('Failed to connect'));
-            }
+                function teardown() {
+                    self._ws.removeEventListener('open', open);
+                    self._ws.removeEventListener('error', open);  
+                }
 
-            function open() {
-                console.log('connected');
-                teardown();
-                resolve();
-            }
+                function error() {
+                    teardown();
+                    reject(new Error('Failed to connect'));
+                }
 
-            this._ws.addEventListener('open', open);
-            this._ws.addEventListener('error', error);
+                function open() {
+                    console.log('connected');
+                    teardown();
+                    resolve();
+                }
+
+                this._ws.addEventListener('open', open);
+                this._ws.addEventListener('error', error);
+            }, delayMs);
         });
     }
 
