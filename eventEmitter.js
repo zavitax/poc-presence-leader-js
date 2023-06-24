@@ -75,6 +75,11 @@ class BroadcastChannelRealtimeEventEmitter /*implements RealtimeEventEmitter */ 
         this._onMessage = this._onMessage.bind(this);
 
         this._broadcastChannel.addEventListener('message', this._onMessage);
+
+        setTimeout(() => {
+            this._eventEmitter.emit('connect');
+            this._eventEmitter.emit('ready');
+        }, 0);
     }
 
     async dispose() {
@@ -96,20 +101,14 @@ class BroadcastChannelRealtimeEventEmitter /*implements RealtimeEventEmitter */ 
     }
 
     on(eventName, handler) {
-        if (eventName !== 'message') throw new Error('`message` expected as eventName');
-
         this._eventEmitter.on(eventName, handler);
     }
 
     off(eventName, handler) {
-        if (eventName !== 'message') throw new Error('`message` expected as eventName');
-
         this._eventEmitter.off(eventName, handler);
     }
 
     emit(eventName, messageData) {
-        if (eventName !== 'message') throw new Error('`message` expected as eventName');
-
         const json = JSON.stringify(messageData);
 
         setTimeout(() => {
@@ -187,6 +186,14 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
                     console.log('connected');
                     teardown();
                     resolve();
+
+                    if (isFirst) {
+                        self._eventEmitter.emit('connect');
+                    } else {
+                        self._eventEmitter.emit('reconnect');
+                    }
+
+                    self._eventEmitter.emit('ready');
                 }
 
                 this._ws.addEventListener('open', open);
@@ -196,6 +203,8 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
     }
 
     _disconnect() {
+        this._eventEmitter.emit('disconnect');
+
         this._ws.removeEventListener('message', this._onMessage);
         this._ws.removeEventListener('close', this._onError);
         this._ws.removeEventListener('error', this._onError);
@@ -213,20 +222,14 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
     }
 
     on(eventName, handler) {
-        if (eventName !== 'message') throw new Error('`message` expected as eventName');
-
         this._eventEmitter.on(eventName, handler);
     }
 
     off(eventName, handler) {
-        if (eventName !== 'message') throw new Error('`message` expected as eventName');
-
         this._eventEmitter.off(eventName, handler);
     }
 
     async emit(eventName, messageData) {
-        if (eventName !== 'message') throw new Error('`message` expected as eventName');
-
         try {
             await this._readyPromise;
 

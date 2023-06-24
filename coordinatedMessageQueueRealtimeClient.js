@@ -14,11 +14,13 @@ class CoordinatedMessageQueueRealtimeClient {
     constructor({
         eventRealtimeClient,
         leaderElectionRealtimeClient,
+        ackTimeoutMilliseconds = 1000 * 30,
     }) {
         this._eventEmitter = new EventEmitter();
 
         this._eventRealtimeClient = eventRealtimeClient;
         this._leaderElectionRealtimeClient = leaderElectionRealtimeClient;
+        this._ackTimeoutMilliseconds = ackTimeoutMilliseconds;
 
         this._queue = [];
         
@@ -214,7 +216,19 @@ class CoordinatedMessageQueueRealtimeClient {
             }));
         }
 
+        let timerHandle = setTimeout(() => {
+            console.warn('ACK timeout');
+
+            timerHandle = null;
+
+            this._resolveAllAckPromises();
+        }, this._ackTimeoutMilliseconds);
+
         this._waitForAckPromise = Promise.allSettled(promises);
+
+        if (timerHandle) {
+            clearTimeout(timerHandle);
+        }
 
         if (this._leaderElectionRealtimeClient.isLeader) {
             // This will be also set in _onMsgEvent, but since we are the leader, lets also set it here

@@ -7,42 +7,51 @@ class PresenceRealtimeClient {
         return this._eventRealtimeClient;
     }
 
-    get presenceData() {
-        return this._requestDataCallback();
+    get localState() {
+        return this._data;;
+    }
+
+    set localState(value) {
+        this._data = value;
+
+        this._heartbeat();
     }
 
     constructor({
         eventRealtimeClient,
         heartbeatIntervalMilliseconds = 15000,
-        requestDataCallback = () => { return {}; },
+        initialState = {},
     }) {
+        this._data = initialState;
+
         this._eventEmitter = new EventEmitter();
 
         this._eventRealtimeClient = eventRealtimeClient;
 
         this._heartbeatIntervalMilliseconds = heartbeatIntervalMilliseconds;
 
-        this._requestDataCallback = requestDataCallback;
-
         this._onEvent = this._onEvent.bind(this);
+        this._onReconnect = this._onReconnect.bind(this);
 
         this._eventRealtimeClient.on('presence:join', this._onEvent);
         this._eventRealtimeClient.on('presence:heartbeat', this._onEvent);
         this._eventRealtimeClient.on('presence:leave', this._onEvent);
+        this._eventRealtimeClient.on('ready', this._onReconnect);
 
         this._participants = {};
 
         this._heartbeatPromise = Promise.resolve();
         this._heartbeatTimer = null;
 
-        this._eventRealtimeClient.emit('presence:join', {});
-
-        this._heartbeat();
-
         this._housekeepInterval = setInterval(this._housekeep.bind(this));
     }
 
     async dispose() {
+        this._eventRealtimeClient.off('presence:join', this._onEvent);
+        this._eventRealtimeClient.off('presence:heartbeat', this._onEvent);
+        this._eventRealtimeClient.off('presence:leave', this._onEvent);
+        this._eventRealtimeClient.off('ready', this._onReconnect);
+
         clearInterval(this._housekeepInterval);
 
         await this._leave();
@@ -83,6 +92,12 @@ class PresenceRealtimeClient {
         }
     }
 
+    async _onReconnect() {
+        this._eventRealtimeClient.emit('presence:join', this._data);
+
+        this._heartbeat();
+    }
+
     async _onParticipantTimeout({ src }) {
         const p = this._participants[src];
 
@@ -98,6 +113,11 @@ class PresenceRealtimeClient {
         //console.log(uuid, '_onParticipantHeartbeat: ', src);
         const isNewParticipant = !this._participants[src];
 
+        const oldState = this._participants[src]?.data;
+        const newState = data;
+
+        const isStateChange = JSON.stringify(oldState) !== JSON.stringify(newState) && !isNewParticipant;
+
         this._participants[src] = this._participants[src] || { src, data };
         const p = this._participants[src];
 
@@ -111,8 +131,12 @@ class PresenceRealtimeClient {
 
             if (src !== this.eventRealtimeClient.uuid) {
                 // Someone new and not me - lets welcome them
-                this.eventRealtimeClient.emit('presence:heartbeat', {});
+                this.eventRealtimeClient.emit('presence:heartbeat', this._data);
             }
+        }
+
+        if (isStateChange) {
+            this._eventEmitter.emit('stateChange', { participant: p });
         }
     }
 
@@ -133,14 +157,18 @@ class PresenceRealtimeClient {
 
         clearTimeout(this._heartbeatTimer);
 
-        await this._eventRealtimeClient.emit('presence:leave', {});
+        await this._eventRealtimeClient.emit('presence:leave', this._data);
     }
 
     async _heartbeat() {
-        this._heartbeatPromise = new Promise(async (resolve) => {
-            const data = this._requestDataCallback();
+        if (this._heartbeatTimer) {
+            clearTimeout(this._heartbeatTimer);
+            
+            this._heartbeatTimer = null;
+        }
 
-            await this._eventRealtimeClient.emit('presence:heartbeat', data);
+        this._heartbeatPromise = new Promise(async (resolve) => {
+            await this._eventRealtimeClient.emit('presence:heartbeat', this._data);
 
             this._heartbeatTimer = setTimeout(async () => {
                 await this._heartbeat();

@@ -41,6 +41,12 @@ class LeaderElectionRealtimeClient {
         this._presenceRealtimeClient.eventRealtimeClient.on('leader:requested', this._onLeaderRequested);
         this._presenceRealtimeClient.eventRealtimeClient.on('leader:announced', this._onLeaderAnnounced);
 
+        this._onDisconnect = this._onDisconnect.bind(this);
+        this._onReconnect = this._onReconnect.bind(this);
+
+        this._presenceRealtimeClient.eventRealtimeClient.on('disconnect', this._onDisconnect);
+        this._presenceRealtimeClient.eventRealtimeClient.on('ready', this._onReconnect);
+
         this._leaderTimer = null;
         this._leader = null;
         this._lastLeaderState = null;
@@ -53,6 +59,9 @@ class LeaderElectionRealtimeClient {
             clearTimeout(this._leaderTimer);
             this._leaderTimer = null;
         }
+
+        this._presenceRealtimeClient.eventRealtimeClient.off('disconnect', this._onDisconnect);
+        this._presenceRealtimeClient.eventRealtimeClient.off('ready', this._onReconnect);
 
         this._presenceRealtimeClient.eventRealtimeClient.off('leader:requested', this._onLeaderRequested);
         this._presenceRealtimeClient.eventRealtimeClient.off('leader:announced', this._onLeaderAnnounced);
@@ -81,6 +90,26 @@ class LeaderElectionRealtimeClient {
         this._eventEmitter.off(eventName, handler);
     }
 
+    _onDisconnect() {
+        this._leader = null;
+
+        if (this._leaderTimer) {
+            clearTimeout(this._leaderTimer);
+            this._leaderTimer = null;
+        }
+
+        if (this._lastLeaderState) {
+            this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
+        }
+
+        this._lastLeaderState = null;
+        this._isWarm = false;
+    }
+
+    _onReconnect() {
+        this._requestLeader();
+    }
+
     _onPresenceJoin({ participant }) {
         /*if (this.isLeader) {
             // Claim leadership
@@ -97,8 +126,10 @@ class LeaderElectionRealtimeClient {
     }
 
     _onPresenceChange({ participants }) {
-        // Re-evaluate leadership when presence information changes
-        this._evalLeader();
+        if (!this._leaderExists()) {
+            // Re-evaluate leadership when presence information changes
+            this._evalLeader();
+        }
     }
 
     _onLeaderRequested() {
@@ -135,8 +166,6 @@ class LeaderElectionRealtimeClient {
     }
 
     _evalLeader() {
-        console.log(uuid, '_evalLeader');
-
         if (this._leaderTimer) {
             clearTimeout(this._leaderTimer);
 
@@ -145,7 +174,7 @@ class LeaderElectionRealtimeClient {
 
         if (this.isLeader) {
             // Claim leadership
-            this._claimLeadership();
+            // this._claimLeadership();
         }
 
         this._leaderTimer = setTimeout(() => {

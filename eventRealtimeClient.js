@@ -16,10 +16,22 @@ class EventRealtimeClient {
 
         const self = this;
 
+        const eventNames = [ 'connect', 'reconnect', 'ready', 'disconnect' ];
+        this._events = {};
+        eventNames.forEach(name => {
+            this._events[name] = (data) => {
+                this._eventEmitter.emit(name, data);
+            };
+        });
+
         this._initPromise = new Promise(async (resolve, reject) => {
             this._realtimeEventEmitterProvider.createRealtimeEventEmitter().then((result) => {
                 self._realtimeEventEmitter = result;
                 self._realtimeEventEmitter.on('message', this._onMessageData);
+
+                for (const event of Object.keys(self._events)) {
+                    this._realtimeEventEmitter.on(event, self._events[event]);
+                }
 
                 resolve();
             }).catch(reject);
@@ -32,6 +44,10 @@ class EventRealtimeClient {
         await Promise.allSettled([this._initPromise]);
 
         this._realtimeEventEmitter?.off('message', this._onMessageData);
+
+        for (const event of Object.keys(this._events)) {
+            this._realtimeEventEmitter.off(event, this._events[event]);
+        }
 
         await this?._realtimeEventEmitter.dispose();
         await this._realtimeEventEmitterProvider.dispose();

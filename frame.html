@@ -6,10 +6,12 @@
         <script src="presenceRealtimeClient.js"></script>
         <script src="leaderElectionRealtimeClient.js"></script>
         <script src="coordinatedMessageQueueRealtimeClient.js"></script>
+        <script src="distributedStateRealtimeClient.js"></script>
 
         <div id="debug"></div>
         <div id="aux"></div>
         <div id="status"></div>
+        <div id="aux_status"></div>
 
         <script>
             const uuid = crypto.randomUUID();
@@ -34,6 +36,10 @@
                     document.getElementById("status").innerText = JSON.stringify([ ... args ]);
                 }
 
+                function aux_status(...args) {
+                    document.getElementById("aux_status").innerText = JSON.stringify([ ... args ]);
+                }
+
                 function color(bgColor = 'inherit') {
                     document.body.style.backgroundColor = bgColor;
                 }
@@ -55,17 +61,134 @@
                     });*/
                 }
 
+                function strcmp(av, bv) {
+                    if (av < bv) return -1;
+                    if (av > bv) return 1;
+                    return 0;
+                }
+
+                function statecmp(a, b) {
+                    const r1 = strcmp(a?.data?.timestamp, b?.data?.timestamp);
+                    
+                    if (r1 !== 0) return r1;
+
+                    return strcmp(a?.data?.nonce, b?.data?.nonce);
+                }
+
+                /*
+                const queue = [];
+
+                const distributedStateRealtimeClient = new DistributedStateRealtimeClient({
+                    presenceRealtimeClient: new PresenceRealtimeClient({
+                        eventRealtimeClient: new EventRealtimeClient({
+                            realtimeEventEmitterProvider: createRealtimeEventEmitterProvider(),
+                        }),
+                        heartbeatIntervalMilliseconds: 5000,
+                    }),
+                    warmupTimeMilliseconds: 15000,
+                    compareStateCallback: (a, b) => {
+                        // Prefer older state to catch up to
+                        return statecmp(b, a);
+                    },
+                });
+
+                const queueEventRealtimeClient = new EventRealtimeClient({
+                    realtimeEventEmitterProvider: createRealtimeEventEmitterProvider(),
+                });
+
+                function remove_stale_queue_items() {
+                    const state = distributedStateRealtimeClient.presenceRealtimeClient.localState;
+
+                    // Remove older than state items from queue
+                    while (queue.length && statecmp(state, queue[0]) === -1) {
+                        queue.shift();
+                    }
+                }
+
+                function process_queue_item(item) {
+                    return new Promise(resolve => {
+                        setTimeout(resolve, Math.round(Math.random() * 15000));
+                    });
+                }
+
+                function update_state() {
+                    console.log('queue: ', queue);
+                    if (queue.length > 0) {
+                        console.log('has state');
+                        distributedStateRealtimeClient.presenceRealtimeClient.localState = {
+                            timestamp: queue[0].timestamp,
+                            nonce: queue[0].nonce,
+                            key: queue[0].key,
+                        };
+                    } else {
+                        console.log('no state');
+                        distributedStateRealtimeClient.presenceRealtimeClient.localState = {
+                            timestamp: 0,
+                            nonce: '',
+                            key: null,
+                        };
+                    }
+
+                    status(distributedStateRealtimeClient.presenceRealtimeClient.localState);
+                }
+
+                function process_next_queue_item() {
+                    remove_stale_queue_items();
+
+                    if (queue.length === 0) return;
+                    if (!distributedStateRealtimeClient.synchronized) return;
+
+                    const item = queue[0];
+
+                    aux_status('processing: ', item);
+                    process_queue_item(item).finally(() => {
+                        aux_status('idle: ');
+
+                        update_state();
+
+                        queue.shift();
+
+                        remove_stale_queue_items();
+                    });
+                }
+
+                queueEventRealtimeClient.on('queue:item', ({ data }) => {
+                    remove_stale_queue_items();
+
+                    //aux('queue: ', data);
+                    queue.push(data);
+
+                    process_next_queue_item();
+                });
+
+                distributedStateRealtimeClient.on('emptyState', () => {
+                    console.log('emptyState');
+                    debug('emptyState');
+                    color('#8888ee');
+                    
+                    update_state();
+                });
+
+                distributedStateRealtimeClient.on('sync', () => {
+                    debug('sync');
+                    color('#88ee88');
+
+                    status(distributedStateRealtimeClient.presenceRealtimeClient.localState);
+                    process_next_queue_item();
+                });
+
+                distributedStateRealtimeClient.on('desync', () => {
+                    debug('desync');
+                    color('#ee8888');
+                });
+                */
+
                 const leaderElectionRealtimeClient = new LeaderElectionRealtimeClient({
                     presenceRealtimeClient: new PresenceRealtimeClient({
                         eventRealtimeClient: new EventRealtimeClient({
                             realtimeEventEmitterProvider: createRealtimeEventEmitterProvider(),
                         }),
                         heartbeatIntervalMilliseconds: 5000,
-                        requestDataCallback: () => {
-                            return {
-                                key: uuid,
-                            };
-                        }
                     }),
                     requestSortParticipantsCallback: (a, b) => {
                         const av = a.data.key;
@@ -76,6 +199,8 @@
                         return 0;
                     },
                 });
+
+                leaderElectionRealtimeClient.presenceRealtimeClient.localState = { key: uuid };
 
                 const coordinatedMessageQueueRealtimeClient = new CoordinatedMessageQueueRealtimeClient({
                     leaderElectionRealtimeClient,
@@ -93,7 +218,7 @@
                     if (leaderElectionRealtimeClient.isLeader) {
                         color('#88ee88');
                     } else {
-                        color('#eeeeee');
+                        color('#ee8888');
                     }
                 });
 
