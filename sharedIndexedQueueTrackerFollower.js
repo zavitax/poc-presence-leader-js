@@ -59,7 +59,7 @@ class SharedIndexedQueueTrackerFollowerImpl {
                 // The follower is processing the item first
                 await this._processQueueItemAsyncCallback({
                     queueIndex: item.queueIndex,
-                    data: item.data
+                    data: item.data,
                 });
 
                 // And only then updating it's state to signal the leader we caught up

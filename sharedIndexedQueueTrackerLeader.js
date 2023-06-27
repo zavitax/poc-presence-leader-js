@@ -59,7 +59,10 @@ class SharedIndexedQueueTrackerLeaderImpl {
 
             // And only afterwards is processing the next queue item to be in sync
             // with all the followers
-            await this._processQueueItemAsyncCallback({ data: item.data });
+            await this._processQueueItemAsyncCallback({
+                queueIndex: item.queueIndex,
+                data: item.data,
+            });
         } catch (e) {
             console.warn('IndexedQueueTrackerLeader: _processNextItem: error: ', e);
         }

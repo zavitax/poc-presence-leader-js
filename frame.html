@@ -113,7 +113,7 @@
                     },
                 });
 
-                function processQueueItemAsyncCallback(data) {
+                function processQueueItemAsyncCallback({ queueIndex, data }) {
                     return new Promise(resolve => {
                         if (!leaderElectionRealtimeClient.isLeader) {
                             color("#eeeeee");
@@ -125,9 +125,9 @@
 
                         status('got event: ', data, '    ack delayMs: ', delayMs);;
 
-                        report_component_status('working');
+                        report_component_status('working: ', queueIndex);
                         setTimeout(() => {
-                            report_component_status('idle');
+                            report_component_status('idle: ', queueIndex);
                             if (!leaderElectionRealtimeClient.isLeader) {
                                 color("#aaaaaa");
                             } else {
