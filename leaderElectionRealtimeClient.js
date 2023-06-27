@@ -55,6 +55,7 @@ class LeaderElectionRealtimeClient {
         warmupTimeMilliseconds = 10000,
         reactTimeMilliseconds = 1000,
     }) {
+        this._quit = false;
         this._eventEmitter = new EventEmitter();
 
         this._compareParticipantsCallback = compareParticipantsCallback;
@@ -93,6 +94,8 @@ class LeaderElectionRealtimeClient {
     }
 
     async dispose() {
+        this._quit = true;
+
         if (this._leaderTimer) {
             clearTimeout(this._leaderTimer);
             this._leaderTimer = null;
@@ -110,16 +113,10 @@ class LeaderElectionRealtimeClient {
 
         await this._presenceRealtimeClient.dispose();
 
-        const wasLeader = this.isLeader;
-
         // Not a leader
         this._leader = null;
 
-        if (wasLeader) {
-            this._eventEmitter.emit('leaderStateChanged', { isLeader: false });
-
-            // this._refreshLocalState(); // Nothing to communicate to
-        }
+        // this._refreshLocalState(); // Nothing to communicate to
     }
 
     on(eventName, handler) {
@@ -138,11 +135,7 @@ class LeaderElectionRealtimeClient {
             this._leaderTimer = null;
         }
 
-        if (this._lastLeaderState) {
-            this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
-
-            this._refreshLocalState();
-        }
+        this._setLeaderState(this.isLeader);
 
         this._lastLeaderState = null;
         this._isWarm = false;
@@ -187,13 +180,7 @@ class LeaderElectionRealtimeClient {
     _onLeaderAnnounced(packet) {
         this._leader = packet;
 
-        if (this.isLeader !== this._lastLeaderState) {
-            this._lastLeaderState = this.isLeader;
-
-            this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
-
-            this._refreshLocalState();
-        }
+        this._setLeaderState(this.isLeader);
     }
 
     _requestLeader() {
@@ -242,7 +229,7 @@ class LeaderElectionRealtimeClient {
 
     _evalLeaderExec() {
         if (this._leaderExists()) {
-            this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
+            this._setLeaderState(this.isLeader);
 
             // Don't swap a leader which already exists
             return;
@@ -261,16 +248,10 @@ class LeaderElectionRealtimeClient {
                 this._claimLeadership();
             }
         } else {
-            const wasLeader = this.isLeader;
-
             // No leaders left
             this._leader = null;
 
-            if (wasLeader) {
-                this._eventEmitter.emit('leaderStateChanged', { isLeader: false });
-
-                this._refreshLocalState();
-            }
+            this._setLeaderState(this.isLeader);
         }
     }
 
@@ -285,11 +266,26 @@ class LeaderElectionRealtimeClient {
     }
 
     _refreshLocalState(force) {
+        if (this._quit) {
+            // Disposed
+            return;
+        }
+
         if (force || this._presenceRealtimeClient.localState?.isLeader === this.isLeader) {
             // Prevent duplicate updates
             return;
         }
 
         this.localState = this.localState;
+    }
+
+    _setLeaderState(isLeader) {
+        if (this._lastLeaderState === isLeader) return;
+
+        this._lastLeaderState = isLeader;
+
+        this._eventEmitter.emit('leaderStateChanged', { isLeader: isLeader });
+
+        this._refreshLocalState();
     }
 }
