@@ -5,26 +5,28 @@ const wss = new WebSocketServer({ port: 8080 });
 
 const sockets = [];
 
+setInterval(() => {
+    const data = {
+        timestamp: Date.now(),
+        nonce: Date.now().toString(),
+        key: crypto.randomUUID(),
+    };
+
+    console.log('queue:item');
+
+    sockets.forEach(socket => {
+        socket.send(JSON.stringify({
+            event: 'queue:item',
+            src: 'server',
+            data,
+        }));
+    });
+}, 3000);
+
 wss.on('connection', function connection(ws) {
     sockets.push(ws);
 
-    const timer = setInterval(() => {
-        sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                event: 'queue:item',
-                src: 'server',
-                data: {
-                    timestamp: Date.now(),
-                    nonce: Date.now().toString(),
-                    key: crypto.randomUUID(),
-                },
-            }));
-        });
-    }, 9000);
-
     ws.on('close', () => {
-        clearInterval(timer);
-
         const index = sockets.indexOf(ws);
 
         sockets.splice(index, 1);

@@ -41,15 +41,13 @@ class LeaderElectionRealtimeClient {
     }
 
     get localState() {
-        return this._data;
+        return this._presenceRealtimeClient.localState.data || {};
     }
 
     set localState(value) {
-        this._data = value;
-
         this._presenceRealtimeClient.localState = {
-            isLeader: this._isLeader,
-            data: this._data,
+            isLeader: this.isLeader,
+            data: value || {},
         };
     }
 
@@ -58,10 +56,7 @@ class LeaderElectionRealtimeClient {
         compareParticipantsCallback,
         warmupTimeMilliseconds = 10000,
         reactTimeMilliseconds = 1000,
-        initialState = {},
     }) {
-        this._data = initialState;
-
         this._eventEmitter = new EventEmitter();
 
         this._compareParticipantsCallback = compareParticipantsCallback;
@@ -123,6 +118,8 @@ class LeaderElectionRealtimeClient {
 
         if (wasLeader) {
             this._eventEmitter.emit('leaderStateChanged', { isLeader: false });
+
+            // this._refreshLocalState(); // Nothing to communicate to
         }
     }
 
@@ -144,6 +141,8 @@ class LeaderElectionRealtimeClient {
 
         if (this._lastLeaderState) {
             this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
+
+            this._refreshLocalState();
         }
 
         this._lastLeaderState = null;
@@ -193,12 +192,14 @@ class LeaderElectionRealtimeClient {
             this._lastLeaderState = this.isLeader;
 
             this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
+
+            this._refreshLocalState();
         }
     }
 
     _requestLeader() {
         this._presenceRealtimeClient.eventRealtimeClient.emit('leader:requested', {
-            ...this._presenceRealtimeClient.presenceData,
+            ...this._presenceRealtimeClient.localState,
         });
 
         this._eventEmitter.emit('leaderRequested', {});
@@ -266,16 +267,16 @@ class LeaderElectionRealtimeClient {
 
             if (wasLeader) {
                 this._eventEmitter.emit('leaderStateChanged', { isLeader: false });
-            }
 
-            this._refreshLocalState();
+                this._refreshLocalState();
+            }
         }
     }
 
     _claimLeadership() {
         // Restate leadership
         this._presenceRealtimeClient.eventRealtimeClient.emit('leader:announced', {
-            ...this._presenceRealtimeClient.presenceData,
+            ...this._presenceRealtimeClient.localState,
         });
 
         // Refresh local state
@@ -288,6 +289,6 @@ class LeaderElectionRealtimeClient {
             return;
         }
 
-        this._presenceRealtimeClient.localState = this._data;
+        this.localState = this.localState;
     }
 }

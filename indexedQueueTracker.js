@@ -42,7 +42,7 @@ class IndexedQueueTracker {
     async dequeue() {
         // Return next item from buffer or `undefined`
 
-        return this._queue.shift()?.data;
+        return this._queue.shift();
     }
 
     async dequeueAtQueueIndex({ queueIndex }) {
@@ -63,6 +63,7 @@ class IndexedQueueTracker {
             } else {
                 // Next item in queue is newer than requested index,
                 // we have to backfill from storage
+                this._queue.unshift(item);
                 break;
             }
         }
@@ -75,27 +76,32 @@ class IndexedQueueTracker {
         // Prepend items with queueIndex smaller than the first queue item to the queue
         for (let i = items.length - 1; i >= 0; --i) {
             const item = items[i];
+            const queueIndex = this._formatIndexCallback(item);
 
-            if (this._queue.length === 0 || item.queueIndex < this._queue[0].queueIndex) {
-                this._queue.unshift(item);
+
+            if (this._queue.length === 0 || queueIndex < this._queue[0].queueIndex) {
+                this._queue.unshift({
+                    queueIndex,
+                    data: item,
+                });
             }
         }
 
         if (this._queue[0]?.queueIndex === queueIndex) {
             // First queue item qualifies
-            return this._queue.unshift();
+            return this._queue.shift();
         }
 
         // No queue items qualify
         return undefined;
     }
 
-    _onQueueItem(packet) {
-        const queueIndex = this._formatIndexCallback(packet);
+    _onQueueItem({ data }) {
+        const queueIndex = this._formatIndexCallback(data);
 
         this._queue.push({
             queueIndex,
-            data: packet.data,
+            data: data,
         });
 
         // Remove older items if buffer too large
@@ -103,6 +109,6 @@ class IndexedQueueTracker {
             this._queue.shift();
         }
 
-        this._eventEmitter.emit('enqueue');
+        this._eventEmitter.emit('change');
     }
 }
