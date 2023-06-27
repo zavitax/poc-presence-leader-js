@@ -15,14 +15,12 @@ class LeaderElectionRealtimeClientProvider {
 
     async createLeaderElectionRealtimeClient({
         compareParticipantsCallback,
-        initialState = {},
     }) {
         return new LeaderElectionRealtimeClient({
             presenceRealtimeClient: this._presenceRealtimeClient,
             warmupTimeMilliseconds: this._warmupTimeMilliseconds,
             reactTimeMilliseconds: this._reactTimeMilliseconds,
             compareParticipantsCallback,
-            initialState,
         });
     }
 }
@@ -90,6 +88,7 @@ class LeaderElectionRealtimeClient {
         this._leader = null;
         this._lastLeaderState = null;
 
+        this._refreshLocalState(true);
         this._requestLeader();
     }
 
@@ -233,7 +232,7 @@ class LeaderElectionRealtimeClient {
 
     _leaderExists() {
         for (const p of this._presenceRealtimeClient.participants) {
-            if (p.localState?.isLeader) {
+            if (p.data?.isLeader) {
                 return true;
             }
         }
@@ -243,6 +242,8 @@ class LeaderElectionRealtimeClient {
 
     _evalLeaderExec() {
         if (this._leaderExists()) {
+            this._eventEmitter.emit('leaderStateChanged', { isLeader: this.isLeader });
+
             // Don't swap a leader which already exists
             return;
         }
@@ -283,8 +284,8 @@ class LeaderElectionRealtimeClient {
         this._refreshLocalState();
     }
 
-    _refreshLocalState() {
-        if (this._presenceRealtimeClient.localState?.isLeader === this.isLeader) {
+    _refreshLocalState(force) {
+        if (force || this._presenceRealtimeClient.localState?.isLeader === this.isLeader) {
             // Prevent duplicate updates
             return;
         }

@@ -50,8 +50,6 @@ class SharedIndexedQueueTrackerLeaderImpl {
 
             if (this._quit) return;
 
-            console.log('leader processing: ', item);
-
             // The leader is setting it's current state immediately for everyone to follow
             this._sharedLeaderElectionRealtimeClient.localState = {
                 queueIndex: item.queueIndex,            
