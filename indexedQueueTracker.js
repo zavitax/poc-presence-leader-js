@@ -83,6 +83,11 @@ class IndexedQueueTracker {
                     queueIndex,
                     data: item,
                 });
+
+                // Remove newer items if buffer too large
+                while (this._queue.length > this._maximumQueueLength) {
+                    this._queue.pop();
+                }
             }
         }
 
