@@ -131,7 +131,7 @@ class PresenceRealtimeClient {
 
             if (src !== this.eventRealtimeClient.uuid) {
                 // Someone new and not me - lets welcome them
-                this.eventRealtimeClient.emit('presence:heartbeat', this._data);
+                this._heartbeat();
             }
         }
 

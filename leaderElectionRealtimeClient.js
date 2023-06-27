@@ -168,6 +168,11 @@ class LeaderElectionRealtimeClient {
     }
 
     _onLeaderRequested() {
+        if (this.isLeader) {
+            this._claimLeadership();
+        }
+
+        /*
         // See if leader election is in order
         this._evalLeader();
 
@@ -175,6 +180,7 @@ class LeaderElectionRealtimeClient {
             // Additional pass
             this._evalLeader();
         }, this._warmupTimeMilliseconds);
+        */
     }
 
     _onLeaderAnnounced(packet) {
