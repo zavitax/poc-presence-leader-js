@@ -284,8 +284,21 @@ class LeaderElectionRealtimeClient {
 
         this._lastLeaderState = isLeader;
 
-        this._eventEmitter.emit('leaderStateChanged', { isLeader: isLeader });
+        this._emitLeaderStateChanged(isLeader);
+    }
 
-        this._refreshLocalState();
+    _emitLeaderStateChanged(isLeader) {
+        if (this._emitLeaderStateChangedTimerHandle) {
+            clearTimeout(this._emitLeaderStateChangedTimerHandle);
+            this._emitLeaderStateChangedTimerHandle = null;
+        }
+
+        this._emitLeaderStateChangedTimerHandle = setTimeout(() => {
+            this._emitLeaderStateChangedTimerHandle = null;
+
+            this._eventEmitter.emit('leaderStateChanged', { isLeader: isLeader });
+
+            this._refreshLocalState();
+        }, 100);
     }
 }

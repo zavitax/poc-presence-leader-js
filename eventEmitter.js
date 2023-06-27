@@ -151,10 +151,18 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
 
         this._readyPromise = Promise.resolve();
 
+        this._reconnectTimerHandle = null;
+
         this._connect(true);
     }
 
     async dispose() {
+        if (this._reconnectTimerHandle) {
+            clearTimeout(this._reconnectTimerHandle);
+
+            this._reconnectTimerHandle = null;
+        }
+
         this._disconnect();
 
         await this._eventEmitter.dispose();
@@ -183,7 +191,6 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
                 }
 
                 function open() {
-                    console.log('connected');
                     teardown();
                     resolve();
 
@@ -214,7 +221,18 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
 
     _onError(event) {
         this._disconnect();
-        this._connect();
+
+        if (this._reconnectTimerHandle) {
+            clearTimeout(this._reconnectTimerHandle);
+
+            this._reconnectTimerHandle = null;
+        }
+
+        setTimeout(() => {
+            this._reconnectTimerHandle = null;
+
+            this._connect();
+        }, 1000);
     }
 
     _onMessage(event) {
