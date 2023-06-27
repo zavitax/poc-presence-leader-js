@@ -26,6 +26,10 @@ app.get('/', async (req, res) => {
                 [Op.gte]: timestamp,
             },
         },
+        order: [
+            [ 'timestamp', 'ASC' ],
+            [ 'nonce', 'ASC' ],
+        ],
     });
 
     const response = events.filter(i => {
@@ -73,7 +77,7 @@ const sockets = [];
                 data: eventData,
             }));
         });
-    }, 3000);
+    }, 1000);
 })();
 
 wss.on('connection', function connection(ws) {
