@@ -78,7 +78,6 @@ class IndexedQueueTracker {
             const item = items[i];
             const queueIndex = this._formatIndexCallback(item);
 
-
             if (this._queue.length === 0 || queueIndex < this._queue[0].queueIndex) {
                 this._queue.unshift({
                     queueIndex,

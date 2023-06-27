@@ -173,8 +173,8 @@ class WebsocketRealtimeEventEmitter /*implements RealtimeEventEmitter */ {
                 self._ws.addEventListener('message', this._onMessage);
 
                 function teardown() {
-                    self._ws.removeEventListener('open', open);
-                    self._ws.removeEventListener('error', open);  
+                    self._ws?.removeEventListener('open', open);
+                    self._ws?.removeEventListener('error', open);  
                 }
 
                 function error() {
