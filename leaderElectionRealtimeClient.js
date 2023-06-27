@@ -35,7 +35,7 @@ class LeaderElectionRealtimeClient {
     }
 
     get hasLeader() {
-        return !!this._leader;
+        return this._leaderExists();
     }
 
     get localState() {
