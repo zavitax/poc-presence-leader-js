@@ -1,5 +1,17 @@
 const { WebSocketServer } = require('ws');
 const crypto = require('crypto');
+const express = require('express');
+
+const app = express();
+const port = 8181;
+
+app.get('/', (req, res) => {
+    res.send('hello');
+});
+
+app.listen(port, () => {
+    console.log(`Example app listening on port ${port}`)
+});
 
 const wss = new WebSocketServer({ port: 8080 });
 
