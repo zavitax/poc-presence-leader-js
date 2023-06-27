@@ -1,3 +1,32 @@
+class LeaderElectionRealtimeClientProvider {
+    constructor({
+        presenceRealtimeClient,
+        warmupTimeMilliseconds = 10000,
+        reactTimeMilliseconds = 1000,
+    }) {
+        this._presenceRealtimeClient = presenceRealtimeClient;
+        this._warmupTimeMilliseconds = warmupTimeMilliseconds;
+        this._reactTimeMilliseconds = reactTimeMilliseconds;
+    }
+
+    async dispose() {
+        await this._presenceRealtimeClient.dispose();
+    }
+
+    async createLeaderElectionRealtimeClient({
+        compareParticipantsCallback,
+        initialState = {},
+    }) {
+        return new LeaderElectionRealtimeClient({
+            presenceRealtimeClient: this._presenceRealtimeClient,
+            warmupTimeMilliseconds: this._warmupTimeMilliseconds,
+            reactTimeMilliseconds: this._reactTimeMilliseconds,
+            compareParticipantsCallback,
+            initialState,
+        });
+    }
+}
+
 class LeaderElectionRealtimeClient {
     get presenceRealtimeClient() {
         return this._presenceRealtimeClient;
@@ -11,21 +40,36 @@ class LeaderElectionRealtimeClient {
         return !!this._leader;
     }
 
+    get localState() {
+        return this._data;
+    }
+
+    set localState(value) {
+        this._data = value;
+
+        this._presenceRealtimeClient.localState = {
+            isLeader: this._isLeader,
+            data: this._data,
+        };
+    }
+
     constructor({
         presenceRealtimeClient,
-        requestSortParticipantsCallback,
+        compareParticipantsCallback,
         warmupTimeMilliseconds = 10000,
-        allowLeaderDemotion = false,
+        reactTimeMilliseconds = 1000,
+        initialState = {},
     }) {
+        this._data = initialState;
+
         this._eventEmitter = new EventEmitter();
 
-        this._requestSortParticipantsCallback = requestSortParticipantsCallback;
+        this._compareParticipantsCallback = compareParticipantsCallback;
         this._presenceRealtimeClient = presenceRealtimeClient;
 
         this._warmupTimeMilliseconds = warmupTimeMilliseconds;
+        this._reactTimeMilliseconds = reactTimeMilliseconds;
         this._isWarm = false;
-
-        this._allowLeaderDemotion = allowLeaderDemotion;
 
         this._onPresenceChange = this._onPresenceChange.bind(this);
         this._onPresenceJoin = this._onPresenceJoin.bind(this);
@@ -126,7 +170,7 @@ class LeaderElectionRealtimeClient {
     }
 
     _onPresenceChange({ participants }) {
-        if (!this._leaderExists()) {
+        if (!this._leaderExists() && this._isWarm) {
             // Re-evaluate leadership when presence information changes
             this._evalLeader();
         }
@@ -183,27 +227,28 @@ class LeaderElectionRealtimeClient {
             this._leaderTimer = null;
 
             this._evalLeaderExec();
-        }, this._isWarm ? 0 : this._warmupTimeMilliseconds);
+        }, this._isWarm ? this._reactTimeMilliseconds : this._warmupTimeMilliseconds);
     }
 
     _leaderExists() {
-        if (this._leader?.src in this.presenceRealtimeClient.participants) {
-            return true;
+        for (const p of this._presenceRealtimeClient.participants) {
+            if (p.localState?.isLeader) {
+                return true;
+            }
         }
 
         return false;
     }
 
     _evalLeaderExec() {
-        console.log(uuid, '_evalLeaderExec');
-        if (this._leaderExists() && !this._allowLeaderDemotion) {
+        if (this._leaderExists()) {
             // Don't swap a leader which already exists
             return;
         }
 
         const participants = [ ... this._presenceRealtimeClient.participants ];
             
-        participants.sort(this._requestSortParticipantsCallback);
+        participants.sort(this._compareParticipantsCallback);
 
         const leader = participants[0];
 
@@ -222,6 +267,8 @@ class LeaderElectionRealtimeClient {
             if (wasLeader) {
                 this._eventEmitter.emit('leaderStateChanged', { isLeader: false });
             }
+
+            this._refreshLocalState();
         }
     }
 
@@ -230,5 +277,17 @@ class LeaderElectionRealtimeClient {
         this._presenceRealtimeClient.eventRealtimeClient.emit('leader:announced', {
             ...this._presenceRealtimeClient.presenceData,
         });
-   }
+
+        // Refresh local state
+        this._refreshLocalState();
+    }
+
+    _refreshLocalState() {
+        if (this._presenceRealtimeClient.localState?.isLeader === this.isLeader) {
+            // Prevent duplicate updates
+            return;
+        }
+
+        this._presenceRealtimeClient.localState = this._data;
+    }
 }
