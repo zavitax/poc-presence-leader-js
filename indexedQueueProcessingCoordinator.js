@@ -12,11 +12,11 @@ class IndexedQueueProcessingCoordinator {
 
         this._onLeaderStateChanged = this._onLeaderStateChanged.bind(this);
 
-        this._leaderElectionRealtimeClient.on('leaderStateChanged', this._onLeaderStateChanged);
+        this._leaderElectionRealtimeClient.on('leadershipStateChanged', this._onLeaderStateChanged);
     }
 
     async dispose() {
-        this._leaderElectionRealtimeClient.off('leaderStateChanged', this._onLeaderStateChanged);
+        this._leaderElectionRealtimeClient.off('leadershipStateChanged', this._onLeaderStateChanged);
 
         if (this._trackerImpl) {
             await this._trackerImpl.dispose();

@@ -302,7 +302,7 @@ class LeaderElectionRealtimeClient {
         this._emitLeaderStateChangedTimerHandle = setTimeout(() => {
             this._emitLeaderStateChangedTimerHandle = null;
 
-            this._eventEmitter.emit('leaderStateChanged', { isLeader: isLeader });
+            this._eventEmitter.emit('leadershipStateChanged', { isLeader: isLeader });
 
             this._refreshLocalState();
         }, 100);

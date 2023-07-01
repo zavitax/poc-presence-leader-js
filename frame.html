@@ -154,7 +154,7 @@
                     }),
                 });*/
 
-                leaderElectionRealtimeClient.on('leaderStateChanged', ({ isLeader }) => {
+                leaderElectionRealtimeClient.on('leadershipStateChanged', ({ isLeader }) => {
                     debug(
                         'isLeader: ',
                         leaderElectionRealtimeClient.isLeader
