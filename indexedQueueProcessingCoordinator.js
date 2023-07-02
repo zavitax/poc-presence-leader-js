@@ -1,4 +1,36 @@
 class IndexedQueueProcessingCoordinator {
+    static COMPARE_PARTICIPANT_QUEUE_INDEX(a, b) {
+        function stremptycmp(av, bv) {
+            if (av === '') {
+                if (bv === av) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            } else if (bv === '') {
+                if (av === bv) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+        function strcmp(av, bv) {
+            const r = stremptycmp(av, bv);
+
+            if (r !== 0) return r;
+
+            if (av < bv) return -1;
+            if (av > bv) return 1;
+            return 0;
+        }
+
+        return strcmp(a?.data?.data?.queueIndex, b?.data?.queueIndex) || strcmp(a?.src, b?.src);
+    }
+    
     constructor({
         indexedQueueTracker,
         leaderElectionRealtimeClient,

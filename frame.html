@@ -92,7 +92,7 @@
                         heartbeatIntervalMilliseconds: 3000,
                     }),
                     compareParticipantsCallback: (a, b) => {
-                        return IndexedQueueTracker.COMPARE_QUEUE_INDEX;
+                        return IndexedQueueProcessingCoordinator.COMPARE_PARTICIPANT_QUEUE_INDEX(a, b);
                     },
                 });
 

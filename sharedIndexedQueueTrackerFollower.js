@@ -29,6 +29,11 @@ class SharedIndexedQueueTrackerFollowerImpl {
         this._sharedLeaderElectionRealtimeClient.presenceRealtimeClient.on('change', this._onPresenceChange);
         this._sharedLeaderElectionRealtimeClient.presenceRealtimeClient.on('stateChange', this._onPresenceChange);
 
+        // Set initial queue index to the current leader's index so we
+        // do not repeat a queue item which might have been processed
+        // by all participants a long time ago
+        this._setInitialQueueIndex();
+
         // Run first cycle of presence change
         this._onPresenceChange();
     }
@@ -93,6 +98,27 @@ class SharedIndexedQueueTrackerFollowerImpl {
         if (this._quit) return;
 
         this._processNextItem();
+    }
+
+    _setInitialQueueIndex() {
+        if (this._quit) return '';
+
+        const localQueueIndex = this.localQueueIndex;
+
+        if (localQueueIndex !== '') return;
+
+        for (const p of this._sharedLeaderElectionRealtimeClient.presenceRealtimeClient.participants) {
+            if (p.data?.isLeader) {
+                const leaderQueueIndex = p.data.data?.queueIndex || '';
+
+                if (leaderQueueIndex !== localQueueIndex) {
+                    // Leader has index, we don't, catch up to most up-to-date
+                    // index on leader.
+                    this.localQueueIndex = leaderQueueIndex;
+                    break;
+                }
+            }
+        }
     }
 
     _getExpectedQueueIndex() {
