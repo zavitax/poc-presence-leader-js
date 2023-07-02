@@ -1,4 +1,15 @@
 class SharedIndexedQueueTrackerFollowerImpl {
+    get localQueueIndex() {
+        return this._sharedLeaderElectionRealtimeClient.localState?.queueIndex || '';
+    }
+
+    set localQueueIndex(value) {
+        this._sharedLeaderElectionRealtimeClient.localState = {
+            ...this._sharedLeaderElectionRealtimeClient.localState,
+            queueIndex: value,
+        };
+    }
+
     constructor({
         sharedIndexedQueueTracker,
         sharedLeaderElectionRealtimeClient,
@@ -52,9 +63,7 @@ class SharedIndexedQueueTrackerFollowerImpl {
                 console.warn('Could not fetch items from storage starting at queueIndex: ', queueIndex, this._sharedIndexedQueueTracker.queue);
 
                 // Update it's state to requested queueIndex signal the leader we caught up
-                this._sharedLeaderElectionRealtimeClient.localState = {
-                    queueIndex,
-                };
+                this.localQueueIndex = queueIndex;
             } else {
                 // The follower is processing the item first
                 await this._processQueueItemAsyncCallback({
@@ -63,9 +72,7 @@ class SharedIndexedQueueTrackerFollowerImpl {
                 });
 
                 // And only then updating it's state to signal the leader we caught up
-                this._sharedLeaderElectionRealtimeClient.localState = {
-                    queueIndex: item.queueIndex,            
-                };
+                this.localQueueIndex = item.queueIndex;
             }
 
             if (this._quit) return;
@@ -93,11 +100,17 @@ class SharedIndexedQueueTrackerFollowerImpl {
 
         for (const p of this._sharedLeaderElectionRealtimeClient.presenceRealtimeClient.participants) {
             if (p.data?.isLeader) {
-                const queueIndex = p.data.data?.queueIndex || '';
-                const localQueueIndex = this._sharedLeaderElectionRealtimeClient.localState?.queueIndex || '';
+                const leaderQueueIndex = p.data.data?.queueIndex || '';
+                const localQueueIndex = this.localQueueIndex;
 
-                if (queueIndex !== localQueueIndex) {
-                    return queueIndex;
+                if (localQueueIndex === '' && leaderQueueIndex !== localQueueIndex) {
+                    // Leader has index, we don't, so just catch up to most up-to-date
+                    // index on leader with no action.
+                    this.localQueueIndex = leaderQueueIndex;
+                    break;
+                }
+                else if (leaderQueueIndex !== localQueueIndex) {
+                    return leaderQueueIndex;
                 } else {
                     // Found a leader, and no index advancement is necessary
                     break;

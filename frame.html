@@ -51,10 +51,6 @@
                     document.body.style.backgroundColor = bgColor;
                 }
 
-                debug('wait');
-
-                //await sleep(Math.floor(10000 * Math.random()));
-
                 debug('start');
                 color('#eeeeee');
 
@@ -62,20 +58,6 @@
                     return new WebsocketRealtimeEventEmitterProvider({
                         websocketUrl: 'ws://localhost:8080',
                     });
-                    /*
-                    return new BroadcastChannelRealtimeEventEmitterProvider({
-                        broadcastChannelName: 'test',
-                    });*/
-                }
-
-                function strcmp(av, bv) {
-                    if (av < bv) return -1;
-                    if (av > bv) return 1;
-                    return 0;
-                }
-
-                function statecmp(a, b) {
-                    return strcmp(a?.data?.data?.queueIndex, b?.data?.queueIndex) || strcmp(a?.src, b?.src);
                 }
 
                 const indexedQueueTracker = new IndexedQueueTracker({
@@ -110,7 +92,7 @@
                         heartbeatIntervalMilliseconds: 3000,
                     }),
                     compareParticipantsCallback: (a, b) => {
-                        return statecmp(a, b);
+                        return IndexedQueueTracker.COMPARE_QUEUE_INDEX;
                     },
                 });
 
@@ -146,14 +128,6 @@
                     processQueueItemAsyncCallback,
                 });
 
-                /*
-                const coordinatedMessageQueueRealtimeClient = new CoordinatedMessageQueueRealtimeClient({
-                    leaderElectionRealtimeClient,
-                    eventRealtimeClient: new EventRealtimeClient({
-                        realtimeEventEmitterProvider: createRealtimeEventEmitterProvider(),
-                    }),
-                });*/
-
                 leaderElectionRealtimeClient.on('leadershipStateChanged', ({ isLeader }) => {
                     debug(
                         'isLeader: ',
@@ -177,55 +151,6 @@
                         leaderElectionRealtimeClient.presenceRealtimeClient.participants.length
                     );
                 });
-
-
-                /*
-                coordinatedMessageQueueRealtimeClient.on('message', event => {
-                    const { src, ack, ackToken, data } = event;
-
-                    if (!leaderElectionRealtimeClient.isLeader) {
-                        color("#eeeeee");
-                    } else {
-                        color('#88ee88');
-                    }
-
-                    const delayMs = Math.floor(Math.random() * 3000);
-
-                    status('got event: from ', src, ' -> ', data.data, '    ack delayMs: ', delayMs);;
-
-                    setTimeout(() => {
-                        //console.log(uuid, ' ack()');
-
-                        ack();
-
-                        if (!leaderElectionRealtimeClient.isLeader) {
-                            color("#aaaaaa");
-                        } else {
-                            color('#44aa44');
-                        }
-                    }, delayMs);
-                });
-
-                await sleep(6000);
-
-                let i = 0;
-                function enqueue() {
-                    ++i;
-                    if (coordinatedMessageQueueRealtimeClient.queue.length < 10) {
-                        coordinatedMessageQueueRealtimeClient.enqueue({ data: { seq: i } });
-                    }
-                    setTimeout(enqueue, 1000);
-                }
-                enqueue();
-
-                window.onbeforeunload = function(event) {
-                    event.preventDefault();
-
-                    coordinatedMessageQueueRealtimeClient.dispose();
-
-                    event.returnValue = "test";
-                }
-                */
 
                 /*
                 debug('dispose');

@@ -1,4 +1,15 @@
 class SharedIndexedQueueTrackerLeaderImpl {
+    get localQueueIndex() {
+        return this._sharedLeaderElectionRealtimeClient.localState?.queueIndex || '';
+    }
+
+    set localQueueIndex(value) {
+        this._sharedLeaderElectionRealtimeClient.localState = {
+            ...this._sharedLeaderElectionRealtimeClient.localState,
+            queueIndex: value,
+        };
+    }
+
     constructor({
         sharedIndexedQueueTracker,
         sharedLeaderElectionRealtimeClient,
@@ -51,9 +62,7 @@ class SharedIndexedQueueTrackerLeaderImpl {
             if (this._quit) return;
 
             // The leader is setting it's current state immediately for everyone to follow
-            this._sharedLeaderElectionRealtimeClient.localState = {
-                queueIndex: item.queueIndex,            
-            };
+            this.localQueueIndex = item.queueIndex;
 
             if (this._quit) return;
 
@@ -96,7 +105,7 @@ class SharedIndexedQueueTrackerLeaderImpl {
     _isDistributedStateAligned() {
         if (this._quit) return false;
 
-        const queueIndex = this._sharedLeaderElectionRealtimeClient.localState.queueIndex || '';
+        const queueIndex = this.localQueueIndex;
 
         for (const p of this._sharedLeaderElectionRealtimeClient.presenceRealtimeClient.participants) {
             const participantQueueIndex = p.data?.data?.queueIndex || '';
